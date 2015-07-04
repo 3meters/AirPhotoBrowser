@@ -569,9 +569,6 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     _pagingScrollView.contentSize = [self contentSizeForPagingScrollView];
 	[self.view addSubview:_pagingScrollView];
     
-    // Transition animation
-    [self performPresentAnimation];
-    
     UIInterfaceOrientation currentOrientation = [UIApplication sharedApplication].statusBarOrientation;
     
     // Toolbar
@@ -660,6 +657,10 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+    
+    // Transition animation
+    [self performPresentAnimation];
+    
     // Update
     [self reloadData];
     
