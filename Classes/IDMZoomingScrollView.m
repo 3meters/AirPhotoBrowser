@@ -247,7 +247,7 @@
 }
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
-	[_photoBrowser hideControlsAfterDelay];
+    //[_photoBrowser hideControlsAfterDelay];
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView {
@@ -258,7 +258,7 @@
 #pragma mark - Tap Detection
 
 - (void)handleSingleTap:(CGPoint)touchPoint {
-	[_photoBrowser performSelector:@selector(toggleControls) withObject:nil afterDelay:0.2];
+	[_photoBrowser performSelector:@selector(toggleControls) withObject:nil afterDelay:0.25];
 }
 
 - (void)handleDoubleTap:(CGPoint)touchPoint {
@@ -280,7 +280,7 @@
 	}
 	
 	// Delay controls
-	[_photoBrowser hideControlsAfterDelay];
+    //[_photoBrowser hideControlsAfterDelay];
 }
 
 // Image View

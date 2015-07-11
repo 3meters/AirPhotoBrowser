@@ -36,9 +36,10 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     // Buttons
     UIButton *_doneButton;
     
-	// Toolbar
+	// Bars
+    UINavigationBar *_navigationBar;
 	UIToolbar *_toolbar;
-	UIBarButtonItem *_previousButton, *_nextButton, *_actionButton;
+	UIBarButtonItem *_previousButton, *_nextButton, *_actionButton, *_cancelButton;
     UIBarButtonItem *_counterButton;
     UILabel *_counterLabel;
     
@@ -62,6 +63,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     BOOL _viewIsActive; // active as in it's in the view heirarchy
     BOOL _autoHide;
     NSInteger _initalPageIndex;
+    NSString *_shareMessage;
     
     BOOL _isdraggingPhoto;
     
@@ -140,6 +142,8 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 @synthesize actionsSheet = _actionsSheet, activityViewController = _activityViewController;
 @synthesize trackTintColor = _trackTintColor, progressTintColor = _progressTintColor;
 @synthesize delegate = _delegate;
+@synthesize toolbar = _toolbar;
+@synthesize shareMessage = _shareMessage;
 
 #pragma mark - NSObject
 
@@ -166,6 +170,8 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         _displayArrowButton = YES;
         _displayCounterLabel = NO;
         
+        _shareMessage = @"Photo from Patchr";
+        
         _forceHideStatusBar = NO;
         _usePopAnimation = NO;
 		_disableVerticalSwipe = NO;
@@ -187,14 +193,12 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         
         _applicationWindow = [[[UIApplication sharedApplication] delegate] window];
 		
-		if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0"))
-		{
+		if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
 			self.modalPresentationStyle = UIModalPresentationCustom;
 			self.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
             self.modalPresentationCapturesStatusBarAppearance = YES;
 		}
-		else
-		{
+		else {
 			_applicationTopViewController = [self topviewController];
 			_previousModalPresentationStyle = _applicationTopViewController.modalPresentationStyle;
 			_applicationTopViewController.modalPresentationStyle = UIModalPresentationCurrentContext;
@@ -357,16 +361,14 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 
 #pragma mark - Animation
 
-- (UIImage*)rotateImageToCurrentOrientation:(UIImage*)image
-{
-    if(UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation))
-    {
-        UIImageOrientation orientation = ([UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft) ?UIImageOrientationLeft : UIImageOrientationRight;
+- (UIImage*)rotateImageToCurrentOrientation:(UIImage*)image {
+    
+    if(UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
+        UIImageOrientation orientation = ([UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft)
+            ? UIImageOrientationLeft
+            : UIImageOrientationRight;
         
-        UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:image.CGImage
-                                                           scale:1.0
-                                                     orientation:orientation];
-        
+        UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:image.CGImage scale:1.0 orientation:orientation];
         image = rotatedImage;
     }
     
@@ -386,7 +388,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     CGFloat screenWidth = screenBound.size.width;
     CGFloat screenHeight = screenBound.size.height;
     
-    UIView *fadeView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenWidth, screenHeight)];
+    UIView *fadeView = [[UIView alloc] initWithFrame:CGRectMake(0, 64, screenWidth, screenHeight - 108)];
     fadeView.backgroundColor = [UIColor clearColor];
     [_applicationWindow addSubview:fadeView];
     
@@ -470,9 +472,17 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         [self dismissPhotoBrowserAnimated:NO];
     };
     
+    
     [UIView animateWithDuration:_animationDuration animations:^{
         fadeView.alpha = 0;
         self.view.backgroundColor = [UIColor clearColor];
+        _forceHideStatusBar = NO;
+        [self setNeedsStatusBarAppearanceUpdate];
+        
+        if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
+            NSNumber *value = [NSNumber numberWithInt:UIInterfaceOrientationPortrait];
+            [[UIDevice currentDevice] setValue:value forKey:@"orientation"];
+        }
     } completion:nil];
     
     if(_usePopAnimation)
@@ -513,8 +523,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         if ([_delegate respondsToSelector:@selector(photoBrowser:didDismissAtPageIndex:)])
             [_delegate photoBrowser:self didDismissAtPageIndex:_currentPageIndex];
 		
-		if (SYSTEM_VERSION_LESS_THAN(@"8.0"))
-		{
+        if (SYSTEM_VERSION_LESS_THAN(@"8.0")) {
 			_applicationTopViewController.modalPresentationStyle = _previousModalPresentationStyle;
 		}
     }];
@@ -571,16 +580,20 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     
     UIInterfaceOrientation currentOrientation = [UIApplication sharedApplication].statusBarOrientation;
     
+    // Navbar
+    _navigationBar = [[UINavigationBar alloc] initWithFrame:[self frameForNavigationBarAtOrientation:currentOrientation]];
+    _navigationBar.translucent = YES;
+    
+    // Custom buttons
+    _cancelButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneButtonPressed:)];
+    
     // Toolbar
     _toolbar = [[UIToolbar alloc] initWithFrame:[self frameForToolbarAtOrientation:currentOrientation]];
-    _toolbar.backgroundColor = [UIColor clearColor];
+    [_toolbar sizeToFit];
     _toolbar.clipsToBounds = YES;
     _toolbar.translucent = YES;
-    [_toolbar setBackgroundImage:[UIImage new]
-              forToolbarPosition:UIToolbarPositionAny
-                      barMetrics:UIBarMetricsDefault];
     
-    // Close Button
+    // Done Button
     _doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [_doneButton setFrame:[self frameForDoneButtonAtOrientation:currentOrientation]];
     [_doneButton setAlpha:1.0f];
@@ -640,9 +653,9 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     _counterButton = [[UIBarButtonItem alloc] initWithCustomView:_counterLabel];
     
     // Action Button
-    _actionButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction
-                                                                  target:self
-                                                                  action:@selector(actionButtonPressed:)];
+//    _actionButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction
+//                                                                  target:self
+//                                                                  action:@selector(actionButtonPressed:)];
     
     // Gesture
     _panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGestureRecognized:)];
@@ -670,8 +683,6 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     // Status Bar
     _statusBarOriginallyHidden = [UIApplication sharedApplication].statusBarHidden;
     
-    // Update UI
-	[self hideControlsAfterDelay];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -696,12 +707,14 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 #pragma mark - Status Bar
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
-    return _useWhiteBackgroundColor ? 1 : 0;
+    return UIStatusBarStyleDefault;
 }
 
 - (BOOL)prefersStatusBarHidden {
+    
+    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
     if(_forceHideStatusBar) {
-        return YES;
+        return UIInterfaceOrientationIsLandscape(orientation);
     }
     
     if(_isdraggingPhoto) {
@@ -731,6 +744,9 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     
     // Toolbar
     _toolbar.frame = [self frameForToolbarAtOrientation:currentOrientation];
+    
+    // Navigation bar
+    _navigationBar.frame = [self frameForNavigationBarAtOrientation:currentOrientation];
     
     // Done button
     _doneButton.frame = [self frameForDoneButtonAtOrientation:currentOrientation];
@@ -771,7 +787,6 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 - (void)performLayout {
     // Setup
     _performingLayout = YES;
-    NSUInteger numberOfPhotos = [self numberOfPhotos];
     
 	// Setup pages
     [_visiblePages removeAllObjects];
@@ -784,39 +799,18 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         [_toolbar removeFromSuperview];
     }
     
+    // Navigation bar
+    [self.view addSubview:_navigationBar];
+    
+    // Navigation bar items
+    self.navigationItem.rightBarButtonItem = _cancelButton;
+    [_navigationBar setItems:@[self.navigationItem]];
+    
     // Close button
     if(_displayDoneButton && !self.navigationController.navigationBar)
         [self.view addSubview:_doneButton];
     
     // Toolbar items & navigation
-    UIBarButtonItem *fixedLeftSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace
-                                                                                    target:self action:nil];
-    fixedLeftSpace.width = 32; // To balance action button
-    UIBarButtonItem *flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
-                                                                               target:self action:nil];
-    NSMutableArray *items = [NSMutableArray new];
-    
-    if (_displayActionButton)
-        [items addObject:fixedLeftSpace];
-    [items addObject:flexSpace];
-    
-    if (numberOfPhotos > 1 && _displayArrowButton)
-        [items addObject:_previousButton];
-    
-    if(_displayCounterLabel) {
-        [items addObject:flexSpace];
-        [items addObject:_counterButton];
-    }
-    
-    [items addObject:flexSpace];
-    if (numberOfPhotos > 1 && _displayArrowButton)
-        [items addObject:_nextButton];
-    [items addObject:flexSpace];
-    
-    if(_displayActionButton)
-        [items addObject:_actionButton];
-    
-    [_toolbar setItems:items];
 	[self updateToolbar];
     
     // Content offset
@@ -826,6 +820,27 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 	
 	if(! _disableVerticalSwipe)
 		[self.view addGestureRecognizer:_panGesture];
+}
+
+//- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
+//    
+//    [coordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+//        
+//        UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
+//        if (UIInterfaceOrientationIsLandscape(orientation)) {
+//            [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+//        }
+//        else {
+//            [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationFade];
+//        }
+//     } completion:^(id<UIViewControllerTransitionCoordinatorContext> context)
+//     {  }];
+//    
+//    [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
+//}
+
+- (NSUInteger)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskAll;
 }
 
 #pragma mark - Data
@@ -1077,9 +1092,16 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     CGFloat height = 44;
     
     if ([self isLandscape:orientation])
-        height = 32;
+        height = 44;
     
     return CGRectMake(0, self.view.bounds.size.height - height, self.view.bounds.size.width, height);
+}
+
+- (CGRect)frameForNavigationBarAtOrientation:(UIInterfaceOrientation)orientation {
+    CGFloat height = 44 + 20;
+    if ([self isLandscape:orientation])
+        height = 44;
+    return CGRectMake(0, 0, self.view.bounds.size.width, height);
 }
 
 - (CGRect)frameForDoneButtonAtOrientation:(UIInterfaceOrientation)orientation {
@@ -1163,12 +1185,10 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
             [self updateToolbar];
         }
 	}
-	
-	// Update timer to give more time
-	[self hideControlsAfterDelay];
 }
 
 - (void)gotoPreviousPage { [self jumpToPageAtIndex:_currentPageIndex-1]; }
+
 - (void)gotoNextPage     { [self jumpToPageAtIndex:_currentPageIndex+1]; }
 
 #pragma mark - Control Hiding / Showing
@@ -1185,19 +1205,16 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     }
     
     // Hide/show bars
-    [UIView animateWithDuration:(animated ? 0.1 : 0) animations:^(void) {
+    [UIView animateWithDuration:(animated ? 0.2 : 0) animations:^(void) {
         CGFloat alpha = hidden ? 0 : 1;
-        [self.navigationController.navigationBar setAlpha:alpha];
+        //        [self.navigationController.navigationBar setAlpha:alpha];
         [_toolbar setAlpha:alpha];
+        [_navigationBar setAlpha:alpha];
         [_doneButton setAlpha:alpha];
         for (UIView *v in captionViews) v.alpha = alpha;
     } completion:^(BOOL finished) {}];
     
-	// Control hiding timer
-	// Will cancel existing timer but only begin hiding if they are visible
-	if (!permanent) [self hideControlsAfterDelay];
-    
-    [self setNeedsStatusBarAppearanceUpdate];
+   [self setNeedsStatusBarAppearanceUpdate];
 }
 
 - (void)cancelControlHiding {
@@ -1214,14 +1231,15 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     
     if (![self areControlsHidden]) {
         [self cancelControlHiding];
-		_controlVisibilityTimer = [NSTimer scheduledTimerWithTimeInterval:5 target:self selector:@selector(hideControls) userInfo:nil repeats:NO];
+        _controlVisibilityTimer = [NSTimer scheduledTimerWithTimeInterval:5 target:self selector:@selector(hideControls) userInfo:nil repeats:NO];
 	}
 }
 
 - (BOOL)areControlsHidden { return (_toolbar.alpha == 0); }
-- (void)hideControls      { if(_autoHide) [self setControlsHidden:YES animated:YES permanent:NO]; }
-- (void)toggleControls    { [self setControlsHidden:![self areControlsHidden] animated:YES permanent:NO]; }
 
+- (void)hideControls      { if(_autoHide) [self setControlsHidden:YES animated:YES permanent:NO]; }
+
+- (void)toggleControls    { [self setControlsHidden:![self areControlsHidden] animated:YES permanent:NO]; }
 
 #pragma mark - Properties
 
@@ -1258,7 +1276,8 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         {
             // Activity view
             NSMutableArray *activityItems = [NSMutableArray arrayWithObject:[photo underlyingImage]];
-            if (photo.caption) [activityItems addObject:photo.caption];
+            //if (photo.caption) [activityItems addObject:photo.caption];
+            [activityItems addObject:_shareMessage];
             
             self.activityViewController = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
             

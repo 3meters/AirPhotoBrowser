@@ -38,6 +38,7 @@
 @property (nonatomic, strong) NSArray *actionButtonTitles;
 @property (nonatomic, weak) UIImage *leftArrowImage, *leftArrowSelectedImage;
 @property (nonatomic, weak) UIImage *rightArrowImage, *rightArrowSelectedImage;
+@property (nonatomic, strong) UIToolbar *toolbar;
 
 // View customization
 @property (nonatomic) BOOL displayDoneButton;
@@ -49,6 +50,7 @@
 
 @property (nonatomic) BOOL arrowButtonsChangePhotosAnimated;
 
+@property (nonatomic, strong) NSString *shareMessage;
 @property (nonatomic) BOOL forceHideStatusBar;
 @property (nonatomic) BOOL usePopAnimation;
 @property (nonatomic) BOOL disableVerticalSwipe;
