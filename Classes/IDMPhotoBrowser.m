@@ -1283,20 +1283,10 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
             
             __typeof__(self) __weak selfBlock = self;
 			
-			if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0"))
-			{
-				[self.activityViewController setCompletionWithItemsHandler:^(NSString *activityType, BOOL completed, NSArray *returnedItems, NSError *activityError) {
-					[selfBlock hideControlsAfterDelay];
-					selfBlock.activityViewController = nil;
-				}];
-			}
-			else
-			{
-				[self.activityViewController setCompletionHandler:^(NSString *activityType, BOOL completed) {
-					[selfBlock hideControlsAfterDelay];
-					selfBlock.activityViewController = nil;
-				}];
-			}
+			[self.activityViewController setCompletionWithItemsHandler:^(NSString *activityType, BOOL completed, NSArray *returnedItems, NSError *activityError) {
+				[selfBlock hideControlsAfterDelay];
+				selfBlock.activityViewController = nil;
+			}];
 			
             [self presentViewController:self.activityViewController animated:YES completion:nil];
         }
