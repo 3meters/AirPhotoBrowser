@@ -76,6 +76,8 @@
 // Reloads the photo browser and refetches data
 - (void)reloadData;
 
+- (void)actionButtonPressed:(id)sender;
+
 // Set page that photo browser starts on
 - (void)setInitialPageIndex:(NSUInteger)index;
 
