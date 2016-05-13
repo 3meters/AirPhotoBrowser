@@ -39,6 +39,7 @@
 @property (nonatomic, weak) UIImage *leftArrowImage, *leftArrowSelectedImage;
 @property (nonatomic, weak) UIImage *rightArrowImage, *rightArrowSelectedImage;
 @property (nonatomic, strong) UIToolbar *toolbar;
+@property (nonatomic, strong) NSMutableArray *photos;
 
 // View customization
 @property (nonatomic) BOOL displayDoneButton;

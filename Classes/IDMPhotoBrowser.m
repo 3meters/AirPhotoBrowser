@@ -143,6 +143,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 @synthesize trackTintColor = _trackTintColor, progressTintColor = _progressTintColor;
 @synthesize delegate = _delegate;
 @synthesize toolbar = _toolbar;
+@synthesize photos = _photos;
 @synthesize shareMessage = _shareMessage;
 
 #pragma mark - NSObject
@@ -163,7 +164,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
         _autoHide = YES;
 
         _autoHideInterface = YES;
-        
+
         _displayDoneButton = YES;
         _doneButtonImage = nil;
         
