@@ -877,7 +877,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
             if ([photo caption]) captionView = [[IDMCaptionView alloc] initWithPhoto:photo];
         }
     }
-    captionView.alpha = [self areControlsHidden] ? 0 : 1; // Initial alpha
+	captionView.alpha = [self areControlsHidden] ? 0 : 1; // Initial alpha
     
     return captionView;
 }
@@ -983,12 +983,12 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 			[_visiblePages addObject:page];
 			[_pagingScrollView addSubview:page];
 			IDMLog(@"Added page at index %i", index);
-            
-            // Add caption
-            IDMCaptionView *captionView = [self captionViewForPhotoAtIndex:index];
-            captionView.frame = [self frameForCaptionView:captionView atIndex:index];
-            [_pagingScrollView addSubview:captionView];
-            page.captionView = captionView;
+			
+			// Add caption
+			IDMCaptionView *captionView = [self captionViewForPhotoAtIndex:index];
+			captionView.frame = [self frameForCaptionView:captionView atIndex:index];
+			[_pagingScrollView addSubview:captionView];
+			page.captionView = captionView;
 		}
 	}
 }
