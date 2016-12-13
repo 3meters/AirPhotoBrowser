@@ -81,6 +81,7 @@
 - (void)reloadData;
 
 - (void)actionButtonPressed:(id)sender;
+- (void)doneButtonPressed:(id)sender;
 
 // Set page that photo browser starts on
 - (void)setInitialPageIndex:(NSUInteger)index;
