@@ -16,6 +16,7 @@
 
     // Image
     UIImage *_underlyingImage;
+    NSData *_underlyingImageData;
 
     // Other
     NSString *_caption;
@@ -24,6 +25,7 @@
 
 // Properties
 @property (nonatomic, strong) UIImage *underlyingImage;
+@property (nonatomic, strong) NSData *underlyingImageData;
 
 // Methods
 - (void)imageLoadingComplete;
@@ -34,7 +36,8 @@
 @implementation IDMPhoto
 
 // Properties
-@synthesize underlyingImage = _underlyingImage, 
+@synthesize underlyingImage = _underlyingImage,
+underlyingImageData = _underlyingImageData,
 photoURL = _photoURL,
 caption = _caption;
 
@@ -124,6 +127,10 @@ caption = _caption;
     return _underlyingImage;
 }
 
+- (NSData *)underlyingImageData {
+    return _underlyingImageData;
+}
+
 - (void)loadUnderlyingImageAndNotify {
 	NSAssert([[NSThread currentThread] isMainThread], @"This method must be called on the main thread.");
 	_loadingInProgress = YES;
@@ -137,21 +144,29 @@ caption = _caption;
 		} else if (_photoURL) {
 			// Load async from web (using SDWebImageManager)
 			SDWebImageManager *manager = [SDWebImageManager sharedManager];
-			[manager downloadImageWithURL:_photoURL options:SDWebImageRetryFailed progress:^(NSInteger receivedSize, NSInteger expectedSize) {
-				CGFloat progress = ((CGFloat)receivedSize)/((CGFloat)expectedSize);
-				if (self.progressUpdateBlock) {
-					self.progressUpdateBlock(progress);
-				}
-			} completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished, NSURL *imageURL) {
-				if (image) {
-					self.underlyingImage = image;
-					[self performSelectorOnMainThread:@selector(imageLoadingComplete) withObject:nil waitUntilDone:NO];
-				}
-			}];
-			
+			[manager loadImageWithURL:_photoURL options:SDWebImageRetryFailed
+                             progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
+                                CGFloat progress = ((CGFloat)receivedSize)/((CGFloat)expectedSize);
+                                if (self.progressUpdateBlock) {
+                                    dispatch_async(dispatch_get_main_queue(), ^{
+                                        self.progressUpdateBlock(progress);
+                                    });
+                                }
+                            }
+                            completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+                                if (image) {
+                                    self.underlyingImage = image;
+                                    self.underlyingImageData = data;
+                                    [self performSelectorOnMainThread:@selector(imageLoadingComplete) withObject:nil waitUntilDone:NO];
+                                }
+                                else if (error) {
+                                    [self performSelectorOnMainThread:@selector(imageLoadingComplete) withObject:nil waitUntilDone:NO];
+                                }
+                            }];			
 		} else {
 			// Failed - no source
 			self.underlyingImage = nil;
+            self.underlyingImageData = nil;
 			[self imageLoadingComplete];
 		}
 	}
@@ -163,6 +178,7 @@ caption = _caption;
 
 	if (self.underlyingImage && (_photoPath || _photoURL)) {
 		self.underlyingImage = nil;
+        self.underlyingImageData = nil;
 	}
 }
 

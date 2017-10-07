@@ -89,4 +89,7 @@
 // Get IDMPhoto at index
 - (id<IDMPhoto>)photoAtIndex:(NSUInteger)index;
 
+// Jay: Expose for more control of navigation bar
+- (void)performLayout;
+
 @end

@@ -123,6 +123,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 - (NSUInteger)numberOfPhotos;
 - (id<IDMPhoto>)photoAtIndex:(NSUInteger)index;
 - (UIImage *)imageForPhoto:(id<IDMPhoto>)photo;
+- (NSData *)imageDataForPhoto:(id<IDMPhoto>)photo;
 - (void)loadAdjacentPhotosIfNecessary:(id<IDMPhoto>)photo;
 - (void)releaseAllUnderlyingPhotos;
 
@@ -398,7 +399,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     fadeView.backgroundColor = [UIColor clearColor];
     [_applicationWindow addSubview:fadeView];
     
-    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
+    FLAnimatedImageView *resizableImageView = [[FLAnimatedImageView alloc] initWithImage:imageFromView];
     resizableImageView.frame = _senderViewOriginalFrame;
     resizableImageView.clipsToBounds = YES;
     resizableImageView.contentMode = UIViewContentModeScaleAspectFill;
@@ -458,7 +459,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     fadeView.alpha = fadeAlpha;
     [_applicationWindow addSubview:fadeView];
     
-    UIImageView *resizableImageView = [[UIImageView alloc] initWithImage:imageFromView];
+    FLAnimatedImageView *resizableImageView = [[FLAnimatedImageView alloc] initWithImage:imageFromView];
     resizableImageView.frame = (imageFromView) ? CGRectMake(0, (screenHeight/2)-((imageFromView.size.height / scaleFactor)/2)+scrollView.frame.origin.y, screenWidth, imageFromView.size.height / scaleFactor) : CGRectZero;
     resizableImageView.contentMode = UIViewContentModeScaleAspectFill;
     resizableImageView.backgroundColor = [UIColor clearColor];
@@ -677,18 +678,20 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 
 - (void)viewWillAppear:(BOOL)animated {
     
-    // Transition animation
-    [self performPresentAnimation];
-    
-    // Update
-    [self reloadData];
+    if (!_viewIsActive) {
+        
+        // Transition animation
+        [self performPresentAnimation];
+        
+        // Update
+        [self reloadData];
+        
+        // Status Bar
+        _statusBarOriginallyHidden = [UIApplication sharedApplication].statusBarHidden;
+    }
     
     // Super
-	[super viewWillAppear:animated];
-    
-    // Status Bar
-    _statusBarOriginallyHidden = [UIApplication sharedApplication].statusBarHidden;
-    
+    [super viewWillAppear:animated];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -809,7 +812,7 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
     [self.view addSubview:_navigationBar];
     
     // Navigation bar items
-    self.navigationItem.rightBarButtonItem = _cancelButton;
+    // Jayma: self.navigationItem.rightBarButtonItem = _cancelButton;
     [_navigationBar setItems:@[self.navigationItem]];
     
     // Close button
@@ -880,7 +883,8 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
             if ([photo caption]) captionView = [[IDMCaptionView alloc] initWithPhoto:photo];
         }
     }
-	captionView.alpha = [self areControlsHidden] ? 0 : 1; // Initial alpha
+    // Jay: captionView.alpha = [self areControlsHidden] ? 0 : 1; // Initial alpha
+    captionView.alpha = 0; // Initial alpha
     
     return captionView;
 }
@@ -899,6 +903,15 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 	}
     
 	return nil;
+}
+
+- (NSData *)imageDataForPhoto:(id<IDMPhoto>)photo {
+    if (photo) {
+        if ([photo underlyingImageData]) {
+            return [photo underlyingImageData];
+        }
+    }
+    return nil;
 }
 
 - (void)loadAdjacentPhotosIfNecessary:(id<IDMPhoto>)photo {
@@ -992,6 +1005,16 @@ NSLocalizedStringFromTableInBundle((key), nil, [NSBundle bundleWithPath:[[NSBund
 			captionView.frame = [self frameForCaptionView:captionView atIndex:index];
 			[_pagingScrollView addSubview:captionView];
 			page.captionView = captionView;
+            
+            if (![self areControlsHidden]) {
+                [UIView animateWithDuration: 0.0
+                                      delay: 0.0
+                                    options: UIViewAnimationOptionCurveLinear
+                                 animations:^{
+                                     captionView.alpha = 1.0;
+                                 }
+                                 completion:^(BOOL finished) {}];
+            }
 		}
 	}
 }

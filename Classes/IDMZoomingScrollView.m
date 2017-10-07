@@ -9,10 +9,12 @@
 #import "IDMZoomingScrollView.h"
 #import "IDMPhotoBrowser.h"
 #import "IDMPhoto.h"
+#import <SDWebImage/NSData+ImageContentType.h>
 
 // Declare private methods of browser
 @interface IDMPhotoBrowser ()
 - (UIImage *)imageForPhoto:(id<IDMPhoto>)photo;
+- (NSData *)imageDataForPhoto:(id<IDMPhoto>)photo;
 - (void)cancelControlHiding;
 - (void)hideControlsAfterDelay;
 - (void)toggleControls;
@@ -58,11 +60,12 @@
         }
         
         // Progress view
-        _progressView = [[DACircularProgressView alloc] initWithFrame:CGRectMake((screenWidth-35.)/2., (screenHeight-35.)/2, 35.0f, 35.0f)];
+        _progressView = [[DALabeledCircularProgressView alloc] initWithFrame:CGRectMake((screenWidth - 150.0f) / 2.0f, (screenHeight - 35.0f) / 2.0f, 150.0f, 35.0f)];
         [_progressView setProgress:0.0f];
         _progressView.tag = 101;
-        _progressView.thicknessRatio = 0.1;
+        _progressView.thicknessRatio = 0.15;
         _progressView.roundedCorners = NO;
+        _progressView.progressLabel.textAlignment = NSTextAlignmentCenter;
         _progressView.trackTintColor    = browser.trackTintColor    ? self.photoBrowser.trackTintColor    : [UIColor colorWithWhite:0.2 alpha:1];
         _progressView.progressTintColor = browser.progressTintColor ? self.photoBrowser.progressTintColor : [UIColor colorWithWhite:1.0 alpha:1];
         [self addSubview:_progressView];
@@ -106,33 +109,48 @@
 		self.contentSize = CGSizeMake(0, 0);
 		
 		// Get image from browser as it handles ordering of fetching
-		UIImage *img = [self.photoBrowser imageForPhoto:_photo];
-		if (img) {
-            // Hide ProgressView
-            //_progressView.alpha = 0.0f;
+        UIImage *image = [self.photoBrowser imageForPhoto:_photo];
+        
+        if (image) {
             [_progressView removeFromSuperview];
+            _photoImageView.alpha = 0.0;
+            _photoImageView.hidden = NO;
+            _photoImageView.image = image;
+
+            NSData *imageData = [self.photoBrowser imageDataForPhoto:_photo];
+            if (imageData) {
+                SDImageFormat imageFormat = [NSData sd_imageFormatForImageData:imageData];
+                if (imageFormat == SDImageFormatGIF) {
+                    FLAnimatedImage *animatedImage = [FLAnimatedImage animatedImageWithGIFData:imageData];
+                    if (animatedImage) {
+                        _photoImageView.animatedImage = animatedImage;
+                    }
+                }
+            }
             
-            // Set image
-			_photoImageView.image = img;
-			_photoImageView.hidden = NO;
+            [UIView animateWithDuration: 0.3
+                             animations:^{
+                                 _photoImageView.alpha = 1.0;
+                                 _progressView.alpha = 0.0f;
+                             }
+                             completion:^(BOOL finished) {}];
             
             // Setup photo frame
-			CGRect photoImageViewFrame;
-			photoImageViewFrame.origin = CGPointZero;
-			photoImageViewFrame.size = img.size;
+            CGRect photoImageViewFrame;
+            photoImageViewFrame.origin = CGPointZero;
+            photoImageViewFrame.size = image.size;
             
-			_photoImageView.frame = photoImageViewFrame;
-			self.contentSize = photoImageViewFrame.size;
-
-			// Set zoom to minimum zoom
-			[self setMaxMinZoomScalesForCurrentBounds];
-        } else {
-			// Hide image view
-			_photoImageView.hidden = YES;
+            _photoImageView.frame = photoImageViewFrame;
+            self.contentSize = photoImageViewFrame.size;
             
+            // Set zoom to minimum zoom
+            [self setMaxMinZoomScalesForCurrentBounds];
+        }
+        else {
+            _photoImageView.hidden = YES;
             _progressView.alpha = 1.0f;
-		}
-        
+        }
+
 		[self setNeedsLayout];
 	}
 }
@@ -149,7 +167,10 @@
 
 // Image failed so just show black!
 - (void)displayImageFailure {
-    [_progressView removeFromSuperview];
+    _progressView.progressLabel.text = @"Image unavailable";
+    _progressView.progressLabel.textColor = [UIColor colorWithRed:0.5 green:0.5 blue:0.5 alpha:1.0];
+    [self setNeedsLayout];
+    //[_progressView removeFromSuperview];
 }
 
 #pragma mark - Setup
@@ -284,10 +305,10 @@
 }
 
 // Image View
-- (void)imageView:(UIImageView *)imageView singleTapDetected:(UITouch *)touch { 
+- (void)imageView:(FLAnimatedImageView *)imageView singleTapDetected:(UITouch *)touch {
     [self handleSingleTap:[touch locationInView:imageView]];
 }
-- (void)imageView:(UIImageView *)imageView doubleTapDetected:(UITouch *)touch {
+- (void)imageView:(FLAnimatedImageView *)imageView doubleTapDetected:(UITouch *)touch {
     [self handleDoubleTap:[touch locationInView:imageView]];
 }
 

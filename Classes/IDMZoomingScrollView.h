@@ -11,7 +11,7 @@
 #import "IDMTapDetectingImageView.h"
 #import "IDMTapDetectingView.h"
 
-#import <DACircularProgress/DACircularProgressView.h>
+#import <DACircularProgress/DALabeledCircularProgressView.h>
 
 @class IDMPhotoBrowser, IDMPhoto, IDMCaptionView;
 
@@ -25,7 +25,7 @@
     
 	IDMTapDetectingView *_tapView; // for background taps
     
-    DACircularProgressView *_progressView;
+    DALabeledCircularProgressView *_progressView;
 }
 
 @property (nonatomic, strong) IDMTapDetectingImageView *photoImageView;
